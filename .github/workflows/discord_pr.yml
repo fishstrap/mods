@@ -46,19 +46,20 @@ jobs:
           TARGET_PATH="${{ inputs.target_dir }}/${{ inputs.post_name }}"
           mkdir -p "$TARGET_PATH"
 
-          cat > "$TARGET_PATH/manifest.json" << EOF
-          {
-            "title": "${{ inputs.post_name }}",
-            "version": "${{ inputs.version }}",
-            "type": ${{ inputs.type_enum }},
-            "author": "${{ inputs.author_name }}",
-            "description": "${{ inputs.description }}"
-          }
-          EOF
+          jq -n \
+            --arg title "${{ inputs.post_name }}" \
+            --arg version "${{ inputs.version }}" \
+            --argjson type ${{ inputs.type_enum }} \
+            --arg author "${{ inputs.author_name }}" \
+            --arg description "${{ inputs.description }}" \
+            '{title: $title, version: $version, type: $type, author: $author, description: $description}' \
+            > "$TARGET_PATH/manifest.json"
 
           curl -sL "${{ inputs.author_pfp_url }}" -o "$TARGET_PATH/author.webp"
           curl -sL "${{ inputs.preview_url }}" -o "$TARGET_PATH/preview.webp"
-          curl -sL "${{ inputs.zip_url }}" -o "$TARGET_PATH/${{ inputs.post_name }}.zip"
+
+          ZIP_FILENAME=$(printf '%s' "${{ inputs.post_name }}" | jq -Rr '@uri')
+          curl -sL "${{ inputs.zip_url }}" -o "$TARGET_PATH/${ZIP_FILENAME}.zip"
 
       - uses: peter-evans/create-pull-request@v8
         with:
